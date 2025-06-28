@@ -1,13 +1,15 @@
 # dSVA
 
 [![arXiv](https://img.shields.io/badge/arXiv-2506.21046-b31b1b?labelColor=2D3339)](https://arxiv.org/abs/2506.21046)
-[![ICCV 2025](https://img.shields.io/badge/ICCV-2025-5A428D?labelColor=2D3339)](https://iccv2025.thecvf.com/)
+[![ICCV 2025](https://img.shields.io/badge/ICCV-2025-5A428D?labelColor=2D3339)](https://iccv.thecvf.com/)
 [![Paper](https://img.shields.io/badge/paper-PDF-16610E?labelColor=2D3339)](https://arxiv.org/pdf/2506.21046)
 [![License](https://img.shields.io/badge/license-MIT-blue?labelColor=2D3339)](LICENSE)
 
 Boosting Generative Adversarial Transferability with Self-supervised Vision Transformer Features
 
 _**Shangbo Wu**, Yu-an Tan, Ruinan Ma, Wencong Ma, Dehua Zhu, Yuanzhang Li^_
+
+![Figure 1 (Optimized for GitHub)](https://github.com/user-attachments/assets/d7d0a037-dfc5-444a-81c3-dc1698bb1506)
 
 ## TL;DR
 
