@@ -9,7 +9,7 @@ Boosting Generative Adversarial Transferability with Self-supervised Vision Tran
 
 _**Shangbo Wu**, Yu-an Tan, Ruinan Ma, Wencong Ma, Dehua Zhu, Yuanzhang Li^_
 
-![Figure 1 (Optimized for GitHub)](https://github.com/user-attachments/assets/d7d0a037-dfc5-444a-81c3-dc1698bb1506)
+<img width="2548" height="868" alt="Figure 1 (Optimized for GitHub)" src="https://github.com/user-attachments/assets/3cfb9b23-7376-4459-8129-0cbc299b299d" />
 
 ## TL;DR
 
