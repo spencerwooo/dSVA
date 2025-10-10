@@ -1,3 +1,4 @@
+from logging import Logger
 from typing import Iterable, Iterator, TypeVar
 
 T = TypeVar("T")
@@ -6,7 +7,8 @@ T = TypeVar("T")
 def progress(
     sequence: Iterable[T], description: str, total: int | None = None
 ) -> Iterator[T]:
-    """Create a progress bar for a sequence.
+    """
+    Create a progress bar for a sequence.
 
     Args:
         sequence: Iterable to track progress of.
@@ -39,8 +41,10 @@ def progress(
         yield from progress.track(sequence, description=description, total=total)
 
 
-def logger(level: str = "INFO"):
+def logger(level: str = "INFO") -> Logger:
+    """Shared logger instance with rich formatting."""
     import logging
+
     from rich.logging import RichHandler
 
     logging.basicConfig(
