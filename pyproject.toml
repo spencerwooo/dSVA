@@ -4,8 +4,17 @@ version = "1.0.0"
 description = "Boosting Generative Adversarial Transferability with Self-supervised Vision Transformer Features"
 readme = "README.md"
 authors = [{ name = "spencerwooo", email = "spencer.woo@outlook.com" }]
-requires-python = ">=3.12"
-dependencies = ["numpy>=2.3", "timm>=1.0", "torch>=2.7", "torchvision>=0.22"]
+requires-python = ">=3.13"
+dependencies = [
+    "jsonargparse[signatures]>=4.41.0",
+    "numpy>=2.3",
+    "rich>=14.2.0",
+    "scipy>=1.16",
+    "timm>=1.0",
+    "torch>=2.7",
+    "torchattack>=1.7.0",
+    "torchvision>=0.22",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.1,<0.10.0"]
