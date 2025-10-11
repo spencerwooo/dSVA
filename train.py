@@ -22,8 +22,29 @@ def train(
     attn_layer: int = -1,
     device: str = "cuda",
     save_dir: str = "checkpoints",
-):
-    """Training script for dSVA's single model variant."""
+) -> None:
+    """
+    Training script for dSVA's single model variant.
+
+    Args:
+        dataset_root: Path to the ImageNet2012 dataset root directory.
+        batch_size: Batch size for training.
+        shuffle: Whether to shuffle the dataset.
+        num_workers: Number of workers for data loading.
+        epochs: Number of training epochs.
+        lr: Learning rate for the Adam optimizer.
+        eps: Max perturbation in Linf norm (in [0, 255] scale).
+        model: Surrogate ViT model to use for feature extraction. One of `dino_vitb16`,
+            `dino_vits16`, `dino_vits8`, `dino_vitb8`, `mae_vitb16`, `vits16`, `vits8`,
+            `vitb16`, or `vitb8`.
+        stride: Patch stride for the ViT model.
+        layer: Layer used within the ViT model blocks.
+        facet: Q/K/V facet to use. One of `key`, `query`, `value`, or `token`.
+        attn_layer: Attention layer to use for extracting the attention saliency map.
+            If set as lower than 0, no attention regularization is applied.
+        device: Device to use for training. Either `cuda` or `cpu`.
+        save_dir: Directory to save model checkpoints.
+    """
 
     # setup experiment
     log = logger()
@@ -31,7 +52,7 @@ def train(
     run += f"_attn{attn_layer}" if attn_layer >= 0 else ""
     save_dir = os.path.join(save_dir, run)
     os.makedirs(save_dir, exist_ok=True)
-    log.info(f"Starting run: {run}")
+    log.info(f'Starting run "{run}"')
 
     # initialize training components
     device = torch.device(device if torch.cuda.is_available() else "cpu")

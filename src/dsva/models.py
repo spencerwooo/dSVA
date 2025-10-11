@@ -8,6 +8,10 @@ import torch.nn as nn
 import torchvision.transforms as T
 from PIL import Image
 
+from dsva.utils import logger
+
+log = logger()
+
 timm_name_mappings = {
     "mae_vitb16": "timm/vit_base_patch16_224.mae",
     "vits16": "timm/vit_small_patch16_224",
@@ -40,7 +44,7 @@ class ViT:
         # essential attributes
         self.p = self.model.patch_embed.patch_size
         self.stride = self.model.patch_embed.proj.stride
-        print(f"Loaded `{name}` with patch size {self.p} and stride {self.stride}")
+        log.info(f"Loaded `{name}` with patch size {self.p} and stride {self.stride}")
 
         # intermediate features and hooks
         self._feats = []

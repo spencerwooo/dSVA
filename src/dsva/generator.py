@@ -1,17 +1,18 @@
 import torch
 import torch.nn as nn
 
-# To control feature map in generator
+# to control feature map in generator
 ngf = 64
 
 
 class Generator(nn.Module):
-    def __init__(self, inception=False):
-        """Generator network (ResNet).
+    def __init__(self, inception: bool = False) -> None:
+        """
+        A ResNet-based generator.
 
         Args:
-            inception: if True crop layer will be added to go from 3x300x300 t0
-            3x299x299. Defaults to False.
+            inception: if True crop layer will be added to go from 3x300x300 to
+                3x299x299. Defaults to False.
         """
 
         super(Generator, self).__init__()
@@ -79,7 +80,9 @@ class Generator(nn.Module):
         )
 
         # Input size = 3, n, n
-        self.blockf = nn.Sequential(nn.ReflectionPad2d(3), nn.Conv2d(ngf, 3, kernel_size=7, padding=0))
+        self.blockf = nn.Sequential(
+            nn.ReflectionPad2d(3), nn.Conv2d(ngf, 3, kernel_size=7, padding=0)
+        )
 
         self.crop = nn.ConstantPad2d((0, -1, -1, 0), 0)
 
@@ -134,9 +137,9 @@ class ResidualBlock(nn.Module):
         return x + residual
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     net_g = Generator()
     test_sample = torch.rand(1, 3, 32, 32)
-    print('Generator output size:', net_g(test_sample).size())
+    print("Generator output size:", net_g(test_sample).size())
     params = sum(p.numel() for p in net_g.parameters() if p.requires_grad)
-    print('Generator params:', params)
+    print("Generator params:", params)
