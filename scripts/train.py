@@ -101,9 +101,7 @@ def train(
     # initialize training components
     device = torch.device(device if torch.cuda.is_available() else "cpu")
     generator = Generator().to(device)
-    optimizer = torch.optim.Adam(
-        generator.parameters(), lr=train.lr, betas=(0.5, 0.999)
-    )
+    optim = torch.optim.Adam(generator.parameters(), lr=train.lr, betas=(0.5, 0.999))
     vit = ViT.from_pretrained(model.name, stride=model.stride).to(device)
 
     dataloader = create_imagenet_dataloader(
@@ -121,7 +119,7 @@ def train(
         description = f"Epoch {epoch + 1}/{train.epochs}"
         for i, (img, _) in enumerate(progress(dataloader, desc=description)):
             generator.train()
-            optimizer.zero_grad()
+            optim.zero_grad()
 
             # forward pass
             img = img.to(device)
@@ -153,7 +151,7 @@ def train(
             ).mean()
 
             loss.backward()
-            optimizer.step()
+            optim.step()
 
             # log running loss
             if (i % train.log_every_n_steps == 0) or (i == len(dataloader) - 1):
@@ -163,7 +161,7 @@ def train(
                 )
                 log.info(loss_log)
 
-        # save model checkpoint
+        # save model checkpoint each epoch
         checkpoint_path = os.path.join(run_dir, f"generator_epoch{epoch + 1}.pth")
         torch.save(generator.state_dict(), checkpoint_path)
         log.info(f"Saved model to {checkpoint_path}")
