@@ -1,0 +1,20 @@
+seed: 42
+device: cuda
+save_dir: outputs
+eps: 10
+model:
+  name: mae_vitb16
+  stride: 16
+  layer: 10
+  facet: query
+  attn_layer: -1
+data:
+  root: datasets/imagenet2012
+  batch_size: 32
+  shuffle: true
+  num_workers: 4
+  pin_memory: true
+train:
+  epochs: 1
+  lr: 0.0002
+  log_every_n_steps: 2000

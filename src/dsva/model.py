@@ -8,9 +8,9 @@ import torch.nn as nn
 import torchvision.transforms as T
 from PIL import Image
 
-from dsva.utils import logger
+from dsva.utils import get_logger
 
-log = logger()
+log = get_logger()
 
 timm_name_mappings = {
     "mae_vitb16": "timm/vit_base_patch16_224.mae",

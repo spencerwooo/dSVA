@@ -1,78 +1,125 @@
 import os
+from dataclasses import dataclass
 
 import torch
 
 from dsva import Generator, ViT
-from dsva.datasets import create_imagenet_dataloader
-from dsva.utils import logger, progress
+from dsva.dataloader import create_imagenet_dataloader
+from dsva.utils import get_logger, make_run_dir, progress, record_env, set_seed
+
+
+@dataclass
+class ModelConfig:
+    """
+    Model configuration.
+
+    Args:
+        name: Surrogate ViT model name to use for feature extraction. One of
+            `dino_vitb16`, `dino_vits16`, `dino_vits8`, `dino_vitb8`, `mae_vitb16`,
+            `vits16`, `vits8`, `vitb16`, or `vitb8`.
+        stride: Patch stride for the ViT model.
+        layer: Layer used within the ViT model blocks.
+        facet: Q/K/V facet to use. One of `key`, `query`, `value`, or `token`.
+        attn_layer: Attention layer to use for extracting the attention saliency
+            map. If set as lower than 0, no attention regularization is applied.
+    """
+
+    name: str = "dino_vitb16"
+    stride: int = 16
+    layer: int = 10
+    facet: str = "key"
+    attn_layer: int = -1
+
+
+@dataclass
+class DataConfig:
+    """
+    Data configuration.
+
+    Args:
+        root: Path to the ImageNet2012 dataset root directory.
+        batch_size: Batch size for training.
+        shuffle: Whether to shuffle the dataset.
+        num_workers: Number of workers for data loading.
+        pin_memory: Whether to pin memory for data loading.
+    """
+
+    root: str = "datasets/imagenet2012"
+    batch_size: int = 32
+    shuffle: bool = True
+    num_workers: int = 4
+    pin_memory: bool = True
+
+
+@dataclass
+class TrainConfig:
+    """
+    Training configuration.
+
+    Args:
+        epochs: Number of training epochs.
+        lr: Learning rate for the Adam optimizer.
+        log_every_n_steps: Frequency of logging the training loss.
+    """
+
+    epochs: int = 1
+    lr: float = 2e-4
+    log_every_n_steps: int = 2000
 
 
 def train(
-    dataset_root: str = "datasets/imagenet2012",
-    batch_size: int = 32,
-    shuffle: bool = True,
-    num_workers: int = 4,
-    epochs: int = 1,
-    lr: float = 2e-4,
-    eps: int = 10,
-    model: str = "dino_vitb16",
-    stride: int = 16,
-    layer: int = 10,
-    facet: str = "key",
-    attn_layer: int = -1,
+    seed: int = 42,
     device: str = "cuda",
-    save_dir: str = "checkpoints",
+    save_dir: str = "outputs",
+    eps: int = 10,
+    model: ModelConfig = ModelConfig(),
+    data: DataConfig = DataConfig(),
+    train: TrainConfig = TrainConfig(),
 ) -> None:
     """
     Training script for dSVA's single model variant.
 
     Args:
-        dataset_root: Path to the ImageNet2012 dataset root directory.
-        batch_size: Batch size for training.
-        shuffle: Whether to shuffle the dataset.
-        num_workers: Number of workers for data loading.
-        epochs: Number of training epochs.
-        lr: Learning rate for the Adam optimizer.
-        eps: Max perturbation in Linf norm (in [0, 255] scale).
-        model: Surrogate ViT model to use for feature extraction. One of `dino_vitb16`,
-            `dino_vits16`, `dino_vits8`, `dino_vitb8`, `mae_vitb16`, `vits16`, `vits8`,
-            `vitb16`, or `vitb8`.
-        stride: Patch stride for the ViT model.
-        layer: Layer used within the ViT model blocks.
-        facet: Q/K/V facet to use. One of `key`, `query`, `value`, or `token`.
-        attn_layer: Attention layer to use for extracting the attention saliency map.
-            If set as lower than 0, no attention regularization is applied.
+        seed: Random seed for reproducibility.
         device: Device to use for training. Either `cuda` or `cpu`.
-        save_dir: Directory to save model checkpoints.
+        save_dir: Directory to save model checkpoints and other training intermediates.
+        eps: Max perturbation in Linf norm (in [0, 255] scale).
+        model: Model configuration.
+        data: Data configuration.
+        train: Training configuration.
     """
 
     # setup experiment
-    log = logger()
-    run = f"dsva_{model}_e{epochs}_bs{batch_size}_eps{eps}_l{layer}_{facet}"
-    run += f"_attn{attn_layer}" if attn_layer >= 0 else ""
-    save_dir = os.path.join(save_dir, run)
-    os.makedirs(save_dir, exist_ok=True)
-    log.info(f'Starting run "{run}"')
+    set_seed(seed=seed)
+    log = get_logger()
+    run_id = f"dsva_{model.name}_ep{train.epochs}_bs{data.batch_size}_eps{eps}_l{model.layer}_{model.facet}"
+    run_id += f"_attn{model.attn_layer}" if model.attn_layer >= 0 else ""
+    run_dir = make_run_dir(save_dir, run_id)
+    record_env(run_dir, run_id)
+    log.info(f'Starting run "{run_id}"')
 
     # initialize training components
     device = torch.device(device if torch.cuda.is_available() else "cpu")
     generator = Generator().to(device)
-    optimizer = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0.5, 0.999))
-    vit = ViT.from_pretrained(model, stride=stride).to(device)
+    optimizer = torch.optim.Adam(
+        generator.parameters(), lr=train.lr, betas=(0.5, 0.999)
+    )
+    vit = ViT.from_pretrained(model.name, stride=model.stride).to(device)
 
     dataloader = create_imagenet_dataloader(
-        root=dataset_root,
+        root=data.root,
         transform=vit.transform,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
+        batch_size=data.batch_size,
+        shuffle=data.shuffle,
+        num_workers=data.num_workers,
+        pin_memory=data.pin_memory,
     )
-    eps = eps / 255.0  # scale perturb from [0, 255] to [0, 1]
+    eps = eps / 255.0  # scale perturbation from [0, 255] to [0, 1]
 
     # train loop
-    for epoch in range(epochs):
-        description = f"Epoch {epoch + 1}/{epochs}"
-        for i, (img, _) in enumerate(progress(dataloader, description=description)):
+    for epoch in range(train.epochs):
+        description = f"Epoch {epoch + 1}/{train.epochs}"
+        for i, (img, _) in enumerate(progress(dataloader, desc=description)):
             generator.train()
             optimizer.zero_grad()
 
@@ -87,15 +134,15 @@ def train(
             # img_feats, attn = vit.get_feats(
             img_feats = vit.get_feats(
                 vit.normalize(img),
-                layer=layer,
-                facet=facet,
-                attn_layer=attn_layer,
+                layer=model.layer,
+                facet=model.facet,
+                attn_layer=model.attn_layer,
             )
             # adv_feats, _ = vit.get_feats(
             adv_feats = vit.get_feats(
                 vit.normalize(adv),
-                layer=layer,
-                facet=facet,
+                layer=model.layer,
+                facet=model.facet,
                 attn_layer=-1,  # only use benign image's attn
             )
 
@@ -109,15 +156,15 @@ def train(
             optimizer.step()
 
             # log running loss
-            if (i % 2000 == 0) or (i == len(dataloader) - 1):
+            if (i % train.log_every_n_steps == 0) or (i == len(dataloader) - 1):
                 loss_log = (
-                    f"epoch {epoch + 1}/{epochs}, "
+                    f"epoch {epoch + 1}/{train.epochs}, "
                     f"step {i + 1}/{len(dataloader)}: loss {loss.item():.6f}"
                 )
                 log.info(loss_log)
 
         # save model checkpoint
-        checkpoint_path = os.path.join(save_dir, f"generator_epoch{epoch + 1}.pth")
+        checkpoint_path = os.path.join(run_dir, f"generator_epoch{epoch + 1}.pth")
         torch.save(generator.state_dict(), checkpoint_path)
         log.info(f"Saved model to {checkpoint_path}")
 

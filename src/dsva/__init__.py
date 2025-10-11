@@ -1,4 +1,4 @@
 from dsva.generator import Generator
-from dsva.models import ViT
+from dsva.model import ViT
 
 __all__ = ["Generator", "ViT"]
