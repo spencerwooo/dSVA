@@ -48,7 +48,7 @@ class ViT:
 
         # intermediate features and hooks
         self._feats = []
-        self.hook_handlers = []
+        self.hooks = []
         self.load_size = None
         self.num_patches = None
 
@@ -153,7 +153,6 @@ class ViT:
 
     def _create_hook(self, facet: str):
         """Generate a hook method for a specific block and facet."""
-
         # for entire layer output facets, i.e., "attn" and "token"
         if facet in ["attn", "token"]:
 
@@ -190,30 +189,21 @@ class ViT:
         for i, block in enumerate(self.model.blocks):
             if i not in layers:
                 continue
-            match facet:
-                case "token":
-                    self.hook_handlers.append(
-                        block.register_forward_hook(self._create_hook(facet))
-                    )
-                case "attn":
-                    self.hook_handlers.append(
-                        block.attn.attn_drop.register_forward_hook(
-                            self._create_hook(facet)
-                        )
-                    )
-                case "key" | "query" | "value":
-                    self.hook_handlers.append(
-                        block.attn.register_forward_hook(self._create_hook(facet))
-                    )
-                case _:
-                    raise TypeError(f"{facet} is not a supported facet.")
+            module = {
+                "key": block.attn,
+                "query": block.attn,
+                "value": block.attn,
+                "token": block,
+                "attn": block.attn.attn_drop,
+            }
+            h = module[facet].register_forward_hook(self._create_hook(facet))
+            self.hooks.append(h)
 
     def _unregister_hooks(self) -> None:
         """Unregisters the hooks, should be called after feature extraction."""
-
-        for handle in self.hook_handlers:
-            handle.remove()
-        self.hook_handlers = []
+        for h in self.hooks:
+            h.remove()
+        self.hooks = []
 
 
 def fix_pos_enc(patch_size: int, stride_hw: tuple[int, int]):

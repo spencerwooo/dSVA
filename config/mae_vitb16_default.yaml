@@ -1,6 +1,6 @@
 seed: 42
 device: cuda
-save_dir: outputs
+save_dir: outputs/runs
 eps: 10
 model:
   name: mae_vitb16

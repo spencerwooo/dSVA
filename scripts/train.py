@@ -70,7 +70,7 @@ class TrainConfig:
 def train(
     seed: int = 42,
     device: str = "cuda",
-    save_dir: str = "outputs",
+    save_dir: str = "outputs/runs",
     eps: int = 10,
     model: ModelConfig = ModelConfig(),
     data: DataConfig = DataConfig(),
