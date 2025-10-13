@@ -5,7 +5,7 @@ import torch
 
 from dsva import Generator, ViT
 from dsva.dataloader import create_imagenet_dataloader
-from dsva.utils import get_logger, make_run_dir, progress, record_env, set_seed
+from dsva.utils import progress, setup_run
 
 
 @dataclass
@@ -90,13 +90,9 @@ def train(
     """
 
     # setup experiment
-    set_seed(seed=seed)
-    log = get_logger()
     run_id = f"dsva_{model.name}_ep{train.epochs}_bs{data.batch_size}_eps{eps}_l{model.layer}_{model.facet}"
     run_id += f"_attn{model.attn_layer}" if model.attn_layer >= 0 else ""
-    run_dir = make_run_dir(save_dir, run_id)
-    record_env(run_dir, run_id)
-    log.info(f'Starting run "{run_id}"')
+    run_dir, logger = setup_run(seed, save_dir, run_id, locals())
 
     # initialize training components
     device = torch.device(device if torch.cuda.is_available() else "cpu")
@@ -159,12 +155,12 @@ def train(
                     f"epoch {epoch + 1}/{train.epochs}, "
                     f"step {i + 1}/{len(dataloader)}: loss {loss.item():.6f}"
                 )
-                log.info(loss_log)
+                logger.info(loss_log)
 
         # save model checkpoint each epoch
         checkpoint_path = os.path.join(run_dir, f"generator_epoch{epoch + 1}.pth")
         torch.save(generator.state_dict(), checkpoint_path)
-        log.info(f"Saved model to {checkpoint_path}")
+        logger.info(f"Saved model to {checkpoint_path}")
 
 
 if __name__ == "__main__":
