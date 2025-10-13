@@ -5,7 +5,7 @@ import torch
 
 from dsva import Generator, ViT
 from dsva.dataloader import create_imagenet_dataloader
-from dsva.utils import progress, setup_run
+from dsva.utils import get_timestamp, progress, setup_run
 
 
 @dataclass
@@ -92,7 +92,7 @@ def train(
     # setup experiment
     run_id = f"dsva_{model.name}_ep{train.epochs}_bs{data.batch_size}_eps{eps}_l{model.layer}_{model.facet}"
     run_id += f"_attn{model.attn_layer}" if model.attn_layer >= 0 else ""
-    run_dir, logger = setup_run(seed, save_dir, run_id, locals())
+    run_dir, logger = setup_run(seed, save_dir, f"{run_id}_{get_timestamp()}", locals())
 
     # initialize training components
     device = torch.device(device if torch.cuda.is_available() else "cpu")

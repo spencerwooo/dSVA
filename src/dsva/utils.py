@@ -23,6 +23,10 @@ def set_seed(seed: int = 42) -> None:
     torch.backends.cudnn.benchmark = False
 
 
+def get_timestamp() -> str:
+    return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+
 def get_logger(level: str = "INFO") -> logging.Logger:
     logging.basicConfig(
         level=level,
@@ -44,8 +48,9 @@ def record_env(
 ) -> None:
     info = {
         "run_id": run_id,
+        "run_dir": run_dir,
         "hostname": socket.gethostname(),
-        "time": datetime.now().isoformat(),
+        "time": get_timestamp(),
         "torch_version": torch.__version__,
         "cuda_available": torch.cuda.is_available(),
     }
