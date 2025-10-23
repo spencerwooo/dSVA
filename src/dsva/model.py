@@ -10,7 +10,7 @@ from PIL import Image
 
 from dsva.utils import get_logger
 
-log = get_logger()
+log = get_logger(__name__)
 
 timm_name_mappings = {
     "mae_vitb16": "timm/vit_base_patch16_224.mae",
@@ -77,7 +77,8 @@ class ViT:
             # https://github.com/facebookresearch/dino/blob/7c446df5b9f45747937fb0d72314eb9f7b66930a/eval_knn.py#L32-L37
             transform = T.Compose(
                 [
-                    T.Resize(256, interpolation=T.InterpolationMode.BICUBIC),
+                    T.Resize(256, antialias=True),
+                    # T.Resize(256, interpolation=T.InterpolationMode.BICUBIC),
                     T.CenterCrop(224),
                     T.ToTensor(),
                 ]

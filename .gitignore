@@ -2,6 +2,7 @@
 datasets/imagenet2012
 datasets/nips2017
 outputs/
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

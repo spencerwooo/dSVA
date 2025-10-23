@@ -27,14 +27,14 @@ def get_timestamp() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
-def get_logger(level: str = "INFO") -> logging.Logger:
+def get_logger(name: str, level: str = "INFO") -> logging.Logger:
     logging.basicConfig(
         level=level,
         format="%(message)s",
         datefmt="[%X]",
         handlers=[RichHandler()],
     )
-    return logging.getLogger("dsva")
+    return logging.getLogger(name)
 
 
 def make_run_dir(save_dir: str, run_id: str) -> str:
@@ -86,7 +86,7 @@ def setup_run(seed: int, save_dir: str, run_id: str, args: dict[str, Any]) -> st
     record_env(run_dir, run_id, run_cfg)
 
     # setup logger
-    logger = get_logger()
+    logger = get_logger(__name__)
     logger.info(f'Starting run "{run_id}"')
     return run_dir, logger
 

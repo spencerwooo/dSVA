@@ -160,7 +160,7 @@ def train(
         # save model checkpoint each epoch
         checkpoint_path = os.path.join(run_dir, f"generator_epoch{epoch + 1}.pth")
         torch.save(generator.state_dict(), checkpoint_path)
-        logger.info(f"Saved model to {checkpoint_path}")
+        logger.info(f'Saved model to "{checkpoint_path}"')
 
 
 if __name__ == "__main__":
