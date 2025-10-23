@@ -7,7 +7,7 @@ model:
   stride: 16
   layer: 10
   facet: key
-  attn_layer: -1
+  attn_layer: 10
 data:
   root: datasets/imagenet2012
   batch_size: 32

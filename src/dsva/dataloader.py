@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 
 from dsva.utils import get_logger
 
-log = get_logger()
+log = get_logger(__name__)
 
 
 def create_imagenet_dataloader(
