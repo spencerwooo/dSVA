@@ -84,11 +84,7 @@ def setup_run(seed: int, save_dir: str, run_id: str, args: dict[str, Any]) -> st
 
     # record environment information
     record_env(run_dir, run_id, run_cfg)
-
-    # setup logger
-    logger = get_logger(__name__)
-    logger.info(f'Starting run "{run_id}"')
-    return run_dir, logger
+    return run_dir
 
 
 def progress(seq: Iterable[T], desc: str, total: int | None = None) -> Iterator[T]:

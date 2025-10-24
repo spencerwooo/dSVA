@@ -77,8 +77,7 @@ class ViT:
             # https://github.com/facebookresearch/dino/blob/7c446df5b9f45747937fb0d72314eb9f7b66930a/eval_knn.py#L32-L37
             transform = T.Compose(
                 [
-                    T.Resize(256, antialias=True),
-                    # T.Resize(256, interpolation=T.InterpolationMode.BICUBIC),
+                    T.Resize(256, interpolation=T.InterpolationMode.BICUBIC),
                     T.CenterCrop(224),
                     T.ToTensor(),
                 ]
@@ -121,10 +120,9 @@ class ViT:
         x: torch.Tensor,
         layer: int,
         facet: str,
-        attn_layer: int = -1,
         include_cls: bool = False,
     ) -> torch.Tensor:
-        supported_facets = ["key", "query", "value", "token"]
+        supported_facets = ["key", "query", "value", "token", "attn"]
         assert facet in supported_facets, (
             f"facet {facet} not supported, choose from {', '.join(supported_facets)}"
         )
@@ -144,13 +142,41 @@ class ViT:
         )
 
         # feature post-processing
-        feats = self._feats[0]  # Bxhxtxd
+        feats = self._feats[0]
+        if facet == "attn":
+            return feats
         if facet == "token":
-            feats.unsqueeze_(1)  # Bx1xtxd
+            feats.unsqueeze_(1)
         if not include_cls:
-            feats = feats[:, :, 1:, :]  # Bxhxt-1xd (remove cls token)
+            feats = feats[:, :, 1:, :]
         feats = feats.permute(0, 2, 3, 1).flatten(start_dim=-2, end_dim=-1)
         return feats.unsqueeze(dim=1)
+
+    def get_feats_and_attn(
+        self,
+        x: torch.Tensor,
+        layer: int,
+        facet: str,
+        attn_layer: int,
+        include_cls: bool = False,
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
+        feats = self.get_feats(
+            x,
+            layer=layer,
+            facet=facet,
+            include_cls=include_cls,
+        )
+        attn = (
+            self.get_feats(
+                x,
+                layer=attn_layer,
+                facet="attn",
+                include_cls=False,
+            )
+            if attn_layer >= 0
+            else None
+        )
+        return feats, attn
 
     def _create_hook(self, facet: str):
         """Generate a hook method for a specific block and facet."""
@@ -174,13 +200,15 @@ class ViT:
                 .reshape(B, N, 3, m.num_heads, C // m.num_heads)
                 .permute(2, 0, 3, 1, 4)
             )
-            self._feats.append(qkv[facet_idx])  # Bxhxtxd
+            self._feats.append(qkv[facet_idx])  # (B, num_heads, N, head_dim)
 
         return _inner_hook
 
     def _register_hooks(self, layers: list[int], facet: str) -> None:
         """
         Register hooks to extract features.
+
+        N.B.: Set `layers` as a list to support multiple layer extraction in the future.
 
         Args:
             layers: Layers from which to extract features.

@@ -1,11 +1,14 @@
-import os
 from dataclasses import dataclass
 
 import torch
 
-from dsva import Generator, ViT
 from dsva.dataloader import create_imagenet_dataloader
-from dsva.utils import get_timestamp, progress, setup_run
+from dsva.generator import Generator
+from dsva.losses import SVALoss
+from dsva.model import ViT
+from dsva.trainer import Trainer
+from dsva.transforms import create_dsva_transforms
+from dsva.utils import get_timestamp, setup_run
 
 
 @dataclass
@@ -59,7 +62,7 @@ class TrainConfig:
     Args:
         epochs: Number of training epochs.
         lr: Learning rate for the Adam optimizer.
-        log_every_n_steps: Frequency of logging the training loss.
+        log_every_n_steps: Log running loss every number of steps.
     """
 
     epochs: int = 1
@@ -92,75 +95,41 @@ def train(
     # setup experiment
     run_id = f"dsva_{model.name}_ep{train.epochs}_bs{data.batch_size}_eps{eps}_l{model.layer}_{model.facet}"
     run_id += f"_attn{model.attn_layer}" if model.attn_layer >= 0 else ""
-    run_dir, logger = setup_run(seed, save_dir, f"{run_id}_{get_timestamp()}", locals())
+    run_dir = setup_run(seed, save_dir, f"{run_id}_{get_timestamp()}", args=locals())
 
     # initialize training components
     device = torch.device(device if torch.cuda.is_available() else "cpu")
-    generator = Generator().to(device)
-    optim = torch.optim.Adam(generator.parameters(), lr=train.lr, betas=(0.5, 0.999))
-    vit = ViT.from_pretrained(model.name, stride=model.stride).to(device)
+    eps = eps / 255.0  # scale perturbation from [0, 255] to [0, 1]
 
+    generator = Generator().to(device)
+    vit = ViT.from_pretrained(model.name, stride=model.stride).to(device)
+    transform, normalize = create_dsva_transforms()
+
+    # construct optimizer and dSVA loss function
+    optimizer = torch.optim.Adam(generator.parameters(), lr=train.lr)
+    criterion = SVALoss(
+        model=vit,
+        layer=model.layer,
+        facet=model.facet,
+        attn_layer=model.attn_layer,
+    )
     dataloader = create_imagenet_dataloader(
         root=data.root,
-        transform=vit.transform,
+        transform=transform,
         batch_size=data.batch_size,
         shuffle=data.shuffle,
         num_workers=data.num_workers,
         pin_memory=data.pin_memory,
     )
-    eps = eps / 255.0  # scale perturbation from [0, 255] to [0, 1]
 
     # train loop
-    for epoch in range(train.epochs):
-        description = f"Epoch {epoch + 1}/{train.epochs}"
-        for i, (img, _) in enumerate(progress(dataloader, desc=description)):
-            generator.train()
-            optim.zero_grad()
-
-            # forward pass
-            img = img.to(device)
-            adv = generator(img)
-
-            # project adversarial perturbation to Linf ball
-            delta = torch.clamp(adv - img, min=-eps, max=eps)
-            adv = torch.clamp(img + delta, min=0, max=1)
-
-            # img_feats, attn = vit.get_feats(
-            img_feats = vit.get_feats(
-                vit.normalize(img),
-                layer=model.layer,
-                facet=model.facet,
-                attn_layer=model.attn_layer,
-            )
-            # adv_feats, _ = vit.get_feats(
-            adv_feats = vit.get_feats(
-                vit.normalize(adv),
-                layer=model.layer,
-                facet=model.facet,
-                attn_layer=-1,  # only use benign image's attn
-            )
-
-            loss = torch.cosine_similarity(
-                x1=img_feats.reshape(img_feats.shape[0], -1),
-                x2=adv_feats.reshape(adv_feats.shape[0], -1),
-                dim=-1,
-            ).mean()
-
-            loss.backward()
-            optim.step()
-
-            # log running loss
-            if (i % train.log_every_n_steps == 0) or (i == len(dataloader) - 1):
-                loss_log = (
-                    f"epoch {epoch + 1}/{train.epochs}, "
-                    f"step {i + 1}/{len(dataloader)}: loss {loss.item():.6f}"
-                )
-                logger.info(loss_log)
-
-        # save model checkpoint each epoch
-        checkpoint_path = os.path.join(run_dir, f"generator_epoch{epoch + 1}.pth")
-        torch.save(generator.state_dict(), checkpoint_path)
-        logger.info(f'Saved model to "{checkpoint_path}"')
+    trainer = Trainer(generator, normalize, eps, optimizer, criterion, device)
+    trainer.train(
+        dataloader,
+        run_dir,  # saves to "{run_dir}/generator_epoch_{epoch}.pth"
+        num_epochs=train.epochs,
+        log_every_n_steps=train.log_every_n_steps,
+    )
 
 
 if __name__ == "__main__":
