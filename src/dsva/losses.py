@@ -38,20 +38,18 @@ class SVALoss(nn.Module):
             Loss value as a scalar tensor.
         """
 
-        # acquire image and adv features, and benign image attention saliency maps
+        # acquire image and adv features, and benign image attention
         img_feats, attn = self.model.get_feats_and_attn(
-            img,
-            layer=self.layer,
-            facet=self.facet,
-            attn_layer=self.attn_layer,
+            img, layer=self.layer, facet=self.facet, attn_layer=self.attn_layer
         )
-        adv_feats = self.model.get_feats(adv, layer=self.layer, facet=self.facet)
+        adv_feats, _ = self.model.get_feats_and_attn(
+            adv, layer=self.layer, facet=self.facet, attn_layer=-1
+        )
 
         # apply attention regularization if required
         if attn is not None:
             attn = attn.detach()  # (B, num_heads, N, N)
-            # attn = attn[:, :, 0, 1:]  # (B, num_heads, N-1)
-            attn = attn[:, :, 1:, 0]  # (B, num_heads, N-1), from all patches to CLS
+            attn = attn[:, :, 0, 1:]  # (B, num_heads, N-1)
             attn = attn.mean(dim=1, keepdim=True)  # (B, 1, N-1), average over heads
             attn = attn.unsqueeze(-1) * 100  # (B, 1, N-1, 1), scale up
 

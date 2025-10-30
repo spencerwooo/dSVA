@@ -46,9 +46,11 @@ class ViT:
         self.stride = self.model.patch_embed.proj.stride
         log.info(f"Loaded `{name}` with patch size {self.p} and stride {self.stride}")
 
-        # intermediate features and hooks
-        self._feats = []
-        self.hooks = []
+        # intermediate features keyed by (layer_index, facet)
+        self._feats: dict[tuple[int, str], torch.Tensor] = {}
+
+        # internal module hooks
+        self.hooks: list[torch.utils.hooks.RemovableHandle] = []
         self.load_size = None
         self.num_patches = None
 
@@ -57,6 +59,11 @@ class ViT:
         """
         Initialize a ViT model (DINO, MAE, or supervised ViT models) from pretrained
         weights sourced from either torch.hub or timm.
+
+        N.B.:
+            We may not use the transform and normalizations resolved from their
+            metadata, as a separate preprocessing is in `src/dsva/transforms.py` to
+            account for training the generator with dual models.
 
         Args:
             name: Name of the model. One of `dino_vitb16`, `dino_vits16`, `dino_vits8`,
@@ -115,43 +122,6 @@ class ViT:
         self.model.to(device)
         return self
 
-    def get_feats(
-        self,
-        x: torch.Tensor,
-        layer: int,
-        facet: str,
-        include_cls: bool = False,
-    ) -> torch.Tensor:
-        supported_facets = ["key", "query", "value", "token", "attn"]
-        assert facet in supported_facets, (
-            f"facet {facet} not supported, choose from {', '.join(supported_facets)}"
-        )
-
-        # clear previous features
-        self._feats = []
-
-        # register hooks and forward pass to extract features
-        B, C, H, W = x.shape
-        self._register_hooks(layers=[layer], facet=facet)
-        self.model(x)
-        self._unregister_hooks()
-        self.load_size = (H, W)
-        self.num_patches = (
-            1 + (H - self.p) // self.stride[0],
-            1 + (W - self.p) // self.stride[1],
-        )
-
-        # feature post-processing
-        feats = self._feats[0]
-        if facet == "attn":
-            return feats
-        if facet == "token":
-            feats.unsqueeze_(1)
-        if not include_cls:
-            feats = feats[:, :, 1:, :]
-        feats = feats.permute(0, 2, 3, 1).flatten(start_dim=-2, end_dim=-1)
-        return feats.unsqueeze(dim=1)
-
     def get_feats_and_attn(
         self,
         x: torch.Tensor,
@@ -160,31 +130,69 @@ class ViT:
         attn_layer: int,
         include_cls: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor | None]:
-        feats = self.get_feats(
-            x,
-            layer=layer,
-            facet=facet,
-            include_cls=include_cls,
+        """
+        Extract features and raw attention from specified layers and facets.
+
+        Args:
+            x: Input images of shape (B, C, H, W).
+            layer: Layer index to extract features from.
+            facet: Feature facet to extract. One of `key`, `query`, `value`, or `token`.
+            attn_layer: Attention layer index to extract raw attention from. Set to -1
+                to disable attention extraction.
+            include_cls: Whether to include the CLS token in the extracted features.
+
+        Returns:
+            A tuple of:
+            - Extracted features of shape (B, 1, N, D), where N is the number of patches
+              (including CLS token if `include_cls` is True) and D is the feature dim.
+            - Extracted raw attention of shape (B, num_heads, N, N) if `attn_layer` >=
+              0, else None.
+        """
+
+        supported_facets = ["key", "query", "value", "token"]
+        assert facet in supported_facets, (
+            f"facet {facet} not supported, choose from {', '.join(supported_facets)}"
         )
-        attn = (
-            self.get_feats(
-                x,
-                layer=attn_layer,
-                facet="attn",
-                include_cls=False,
-            )
-            if attn_layer >= 0
-            else None
+
+        # clear previous features
+        self._feats = {}
+
+        # register hooks for requested facet and attention (if any)
+        B, C, H, W = x.shape
+        self._register_hooks(layers=[layer], facet=facet)
+        if attn_layer >= 0:
+            self._register_hooks(layers=[attn_layer], facet="attn")
+
+        # forward pass
+        self.model(x)
+        self._unregister_hooks()
+        self.load_size = (H, W)
+        self.num_patches = (
+            1 + (H - self.p) // self.stride[0],
+            1 + (W - self.p) // self.stride[1],
         )
+
+        # acquire features and optional attention maps
+        feats = self._feats[(layer, facet)]  # Bxhxtxd
+        attn = self._feats[(attn_layer, "attn")] if attn_layer >= 0 else None
+
+        # post-process facet-level features
+        if facet == "token":
+            feats.unsqueeze_(1)  # (B, 1, t, head_dim)
+        if not include_cls:
+            feats = feats[:, :, 1:, :]  # (B, num_heads, t-1, head_dim)
+        feats = feats.permute(0, 2, 3, 1).flatten(start_dim=-2, end_dim=-1)
+        feats = feats.unsqueeze(dim=1)
+
         return feats, attn
 
-    def _create_hook(self, facet: str):
+    def _create_hook(self, layer: int, facet: str) -> Callable:
         """Generate a hook method for a specific block and facet."""
         # for entire layer output facets, i.e., "attn" and "token"
         if facet in ["attn", "token"]:
 
             def _hook(m, i, o):
-                self._feats.append(o)
+                self._feats[(layer, facet)] = o
 
             return _hook
 
@@ -200,7 +208,7 @@ class ViT:
                 .reshape(B, N, 3, m.num_heads, C // m.num_heads)
                 .permute(2, 0, 3, 1, 4)
             )
-            self._feats.append(qkv[facet_idx])  # (B, num_heads, N, head_dim)
+            self._feats[(layer, facet)] = qkv[facet_idx]  # (B, heads, N, head_dim)
 
         return _inner_hook
 
@@ -215,8 +223,8 @@ class ViT:
             facet: Facet to extract. One of `key`, `query`, `value`, `token`, or `attn`.
         """
 
-        for i, block in enumerate(self.model.blocks):
-            if i not in layers:
+        for layer, block in enumerate(self.model.blocks):
+            if layer not in layers:
                 continue
             module = {
                 "key": block.attn,
@@ -225,7 +233,7 @@ class ViT:
                 "token": block,
                 "attn": block.attn.attn_drop,
             }
-            h = module[facet].register_forward_hook(self._create_hook(facet))
+            h = module[facet].register_forward_hook(self._create_hook(layer, facet))
             self.hooks.append(h)
 
     def _unregister_hooks(self) -> None:
@@ -235,7 +243,7 @@ class ViT:
         self.hooks = []
 
 
-def fix_pos_enc(patch_size: int, stride_hw: tuple[int, int]):
+def fix_pos_enc(patch_size: int, stride_hw: tuple[int, int]) -> Callable:
     """
     Args:
         patch_size: The patch size of the model.
@@ -326,5 +334,6 @@ if __name__ == "__main__":
     out = vit.model(x)
     print(f"{out.shape=}")  # should be [1, 768]
 
-    feats = vit.get_feats(x, layer=10, facet="key")
+    feats, attn = vit.get_feats_and_attn(x, layer=10, facet="key", attn_layer=-1)
     print(f"{feats.shape=}")  # should be [1, 1, 196, 64*12]
+    print(f"{attn is None=}")  # should be True when attn_layer < 0

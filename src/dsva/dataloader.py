@@ -41,23 +41,3 @@ def create_imagenet_dataloader(
         num_workers=num_workers,
         pin_memory=pin_memory,
     )
-
-
-def create_nips_dataloader(
-    root: str | None = None,
-    image_root: str | None = None,
-    image_csv: str | None = None,
-    transform: Callable[[Image.Image, torch.Tensor], torch.Tensor] | None = None,
-    batch_size: int = 32,
-    num_workers: int = 4,
-) -> DataLoader:
-    from torchattack.evaluate import NIPSLoader
-
-    return NIPSLoader(
-        root,
-        image_root,
-        image_csv,
-        transform,
-        batch_size,
-        num_workers=num_workers,
-    )

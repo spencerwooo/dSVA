@@ -27,14 +27,33 @@ def get_timestamp() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
-def get_logger(name: str, level: str = "INFO") -> logging.Logger:
-    logging.basicConfig(
-        level=level,
-        format="%(message)s",
-        datefmt="[%X]",
-        handlers=[RichHandler()],
-    )
-    return logging.getLogger(name)
+def get_logger(
+    name: str,
+    level: str = "INFO",
+    log_file: str | None = None,
+) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    logger.propagate = False  # prevent duplicate logs via root
+
+    # Attach console handler (Rich) once
+    if not any(isinstance(h, RichHandler) for h in logger.handlers):
+        logger.addHandler(RichHandler())
+
+    # Optionally attach a file handler
+    if log_file:
+        abs_file = os.path.abspath(log_file)
+        if not any(
+            isinstance(h, logging.FileHandler)
+            and os.path.abspath(getattr(h, "baseFilename", "")) == abs_file
+            for h in logger.handlers
+        ):
+            fh = logging.FileHandler(abs_file)
+            fh.setLevel(level)
+            fh.setFormatter(logging.Formatter("%(message)s"))
+            logger.addHandler(fh)
+
+    return logger
 
 
 def make_run_dir(save_dir: str, run_id: str) -> str:

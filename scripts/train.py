@@ -31,7 +31,7 @@ class ModelConfig:
     stride: int = 16
     layer: int = 10
     facet: str = "key"
-    attn_layer: int = -1
+    attn_layer: int = 10
 
 
 @dataclass
@@ -80,7 +80,7 @@ def train(
     train: TrainConfig = TrainConfig(),
 ) -> None:
     """
-    Training script for dSVA's single model variant.
+    Training script for dSVA's non-dual model variant, i.e., SVA.
 
     Args:
         seed: Random seed for reproducibility.
@@ -93,7 +93,7 @@ def train(
     """
 
     # setup experiment
-    run_id = f"dsva_{model.name}_ep{train.epochs}_bs{data.batch_size}_eps{eps}_l{model.layer}_{model.facet}"
+    run_id = f"sva_{model.name}_ep{train.epochs}_bs{data.batch_size}_eps{eps}_l{model.layer}_{model.facet}"
     run_id += f"_attn{model.attn_layer}" if model.attn_layer >= 0 else ""
     run_dir = setup_run(seed, save_dir, f"{run_id}_{get_timestamp()}", args=locals())
 
