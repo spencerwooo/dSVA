@@ -12,7 +12,7 @@ dependencies = [
     "scipy>=1.16",
     "timm>=1.0",
     "torch>=2.7",
-    "torchattack>=1.7.0",
+    "torchattack>=1.7.1",
     "torchvision>=0.22",
 ]
 

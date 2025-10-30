@@ -83,7 +83,7 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.16" },
     { name = "timm", specifier = ">=1.0" },
     { name = "torch", specifier = ">=2.7" },
-    { name = "torchattack", specifier = ">=1.7.0" },
+    { name = "torchattack", specifier = ">=1.7.1" },
     { name = "torchvision", specifier = ">=0.22" },
 ]
 
@@ -744,16 +744,16 @@ wheels = [
 
 [[package]]
 name = "torchattack"
-version = "1.7.0"
+version = "1.7.1"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "torch" },
     { name = "torchvision" },
 ]
-sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/b7/fa/bd9c428f512d71d126b5d31fe71414c259059390a93042d361123affbfe2/torchattack-1.7.0.tar.gz", hash = "sha256:5bbf5d5edb14535644d3831afc5701eed4b1def16f9ae99f0017b8f9c2e16d1d", size = 77632, upload-time = "2025-08-05T03:07:09.976Z" }
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/2a/04/1f61fc111f9b4a1d8cb7d4e83b7e6306c8db8cf08dce0e689e9191bbe88c/torchattack-1.7.1.tar.gz", hash = "sha256:ab692fa35f1533fe45b7dfbf36ac58e7d1d4f6098b6d375e9124978fbdb0dcf2", size = 77640, upload-time = "2025-10-30T02:14:43.356Z" }
 wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/03/18/b308382db7963e5a7f9eddee27bb5c60cdaae6bc0d20bd1e6befa083f4c4/torchattack-1.7.0-py3-none-any.whl", hash = "sha256:ccce29e09f28f92eae44549eb7cae2dc2da47d2e9498c0441365633ec29c6bde", size = 116221, upload-time = "2025-08-05T03:07:08.309Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/53/8d/fd59b835c7d22fed93fc89e5f5728e220e906caeb611792a1d76ebb8c8cd/torchattack-1.7.1-py3-none-any.whl", hash = "sha256:9efc7b03174b7d43868e7dec3b34d03fe3994135424cd4f3072c474c3f7f928b", size = 116263, upload-time = "2025-10-30T02:14:41.706Z" },
 ]
 
 [[package]]
