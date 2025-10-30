@@ -2,7 +2,7 @@
 
 [![arXiv](https://img.shields.io/badge/arXiv-2506.21046-b31b1b?labelColor=2D3339)](https://arxiv.org/abs/2506.21046)
 [![ICCV 2025](https://img.shields.io/badge/ICCV-2025-5A428D?labelColor=2D3339)](https://iccv.thecvf.com/)
-[![Paper](https://img.shields.io/badge/paper-PDF-16610E?labelColor=2D3339)](https://arxiv.org/pdf/2506.21046)
+[![Paper](https://img.shields.io/badge/paper-PDF-16610E?labelColor=2D3339)](https://openaccess.thecvf.com/content/ICCV2025/html/Wu_Boosting_Generative_Adversarial_Transferability_with_Self-supervised_Vision_Transformer_Features_ICCV_2025_paper.html)
 [![License](https://img.shields.io/badge/license-MIT-blue?labelColor=2D3339)](LICENSE)
 
 Boosting Generative Adversarial Transferability with Self-supervised Vision Transformer Features
