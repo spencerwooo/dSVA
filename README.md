@@ -1,7 +1,7 @@
 # dSVA
 
 [![arXiv](https://img.shields.io/badge/arXiv-2506.21046-b31b1b?labelColor=2D3339)](https://arxiv.org/abs/2506.21046)
-[![ICCV 2025](https://img.shields.io/badge/ICCV-2025-5A428D?labelColor=2D3339)](https://iccv.thecvf.com/)
+[![ICCV 2025](https://img.shields.io/badge/ICCV-2025-5A428D?labelColor=2D3339)](https://iccv.thecvf.com/virtual/2025/poster/2113)
 [![Paper](https://img.shields.io/badge/paper-PDF-16610E?labelColor=2D3339)](https://openaccess.thecvf.com/content/ICCV2025/html/Wu_Boosting_Generative_Adversarial_Transferability_with_Self-supervised_Vision_Transformer_Features_ICCV_2025_paper.html)
 [![License](https://img.shields.io/badge/license-MIT-blue?labelColor=2D3339)](LICENSE)
 
@@ -19,4 +19,4 @@ We present dSVA, a generative dual self-supervised ViT features attack, that exp
 
 The source code is released under the [MIT License](LICENSE).
 
-_N.B.: To appear in ICCV 2025. This repo will soon be updated, stay tuned._
+> The source code is provided as-is and will not receive any maintenance, updates, or support.
